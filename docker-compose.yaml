@@ -1,0 +1,54 @@
+volumes:
+  database_var:
+
+services:
+  database:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: user-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - database_var:/var/lib/postgresql/data
+
+  setup:
+    build:
+      dockerfile: ./docker/Dockerfile
+    command: ["sh", "/usr/local/bin/setup.sh"]
+    volumes:
+      - ./docker/setup.sh:/usr/local/bin/setup.sh:ro+x
+      - ./:/srv/app:rw
+    depends_on:
+      - database
+
+  fpm:
+    build:
+      dockerfile: ./docker/Dockerfile
+    command:
+      - php-fpm
+    volumes:
+      - ./:/srv/app:rw
+    depends_on:
+      - database
+
+  caddy:
+    build:
+      dockerfile: ./docker/Dockerfile
+    command:
+      - caddy
+      - run
+      - '--config'
+      - /srv/app/docker/Caddyfile
+      - '--adapter'
+      - caddyfile
+    volumes:
+      - ./:/srv/app:rw
+    ports:
+      - target: 8443
+        published: 8443
+        protocol: tcp
+    depends_on:
+      - fpm

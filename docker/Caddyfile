@@ -1,0 +1,9 @@
+:8443
+
+root * /srv/app/public
+
+php_fastcgi fpm:9000
+
+file_server
+
+try_files {path} /index.php
